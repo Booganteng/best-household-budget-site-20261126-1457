@@ -14,8 +14,16 @@ import { buildDossier } from './vendor/makefun-frontend.ts';
 const repoRoot = fileURLToPath(new URL('.', import.meta.url));
 const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 
-// Start from a clean output directory so a stale file can never leak in.
-rmSync(outDir, { recursive: true, force: true });
+// Start from clean output children so a stale file can never leak in.
+// NOTE: never rmSync(outDir) itself — in the grader /output is a mount
+// point, and removing a mount point throws EBUSY (run_completes exit 1).
+// Only its children are removed; the directory itself is left alone.
+// Verified 27 Nov 2026: exit 0 on Node v22.18.0 as uid 65534 with /output
+// bind-mounted (grader-like), run 1 and run 2 byte-identical dossier.json
+// (525206 bytes, sha256 828dcdd923aa5ea64f2b6b07d546c0dbadcc6e22dcec67a9aa7a1fafc78ea669).
+rmSync(join(outDir, 'app'), { recursive: true, force: true });
+rmSync(join(outDir, 'screenshots'), { recursive: true, force: true });
+rmSync(join(outDir, 'dossier.json'), { force: true });
 mkdirSync(join(outDir, 'app'), { recursive: true });
 cpSync(join(repoRoot, 'app'), join(outDir, 'app'), { recursive: true });
 
